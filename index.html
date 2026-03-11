@@ -1,18 +1,1674 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
-    <meta name="theme-color" content="#360077" />
-    <meta name="description" content="Shrinkly — Stateless link shortening. No servers. No tracking. Just math." />
-    <title>Shrinkly — Stateless Link Shortening</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%238000ff'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='55' font-weight='bold' fill='%23fff' text-anchor='middle'%3ES%E2%86%90%3C/text%3E%3C/svg%3E" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5, user-scalable=yes, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#360077">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="description" content="Shrinkly — Stateless link shortening with LZ compression. No servers. No tracking.">
+  <title>Shrinkly — Link Shortener</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%238000ff'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='55' font-weight='bold' fill='%23f5f0ff' text-anchor='middle'%3ES%E2%86%90%3C/text%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%238000ff'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='55' font-weight='bold' fill='%23f5f0ff' text-anchor='middle'%3ES%E2%86%90%3C/text%3E%3C/svg%3E">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ev-50: #f5f0ff;
+      --ev-100: #ede4ff;
+      --ev-200: #ddcdff;
+      --ev-300: #c5a6ff;
+      --ev-400: #ab73ff;
+      --ev-500: #943bff;
+      --ev-600: #8c14ff;
+      --ev-700: #8000ff;
+      --ev-800: #6c01d6;
+      --ev-900: #5903af;
+      --ev-950: #360077;
+      --bg-deep: #08001a;
+      --surface-1: #120030;
+      --surface-2: #1a0044;
+      --success: #5a9a6e;
+      --error: #e05c4d;
+    }
+
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-deep);
+      color: #fff;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+    }
+
+    .navbar {
+      background: var(--ev-950);
+      padding: 0 24px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.5);
+      border-bottom: 1px solid rgba(128,0,255,0.15);
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--ev-700);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', sans-serif;
+      font-weight: 800;
+      font-size: 18px;
+      color: #fff;
+      letter-spacing: -1px;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(128,0,255,0.4);
+    }
+
+    .nav-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+
+    .nav-github {
+      color: #fff;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+      display: flex;
+      align-items: center;
+      -webkit-tap-highlight-color: transparent;
+      padding: 8px;
+      margin: -8px;
+    }
+    .nav-github:hover { opacity: 1; }
+    .nav-github svg { width: 24px; height: 24px; }
+
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 60px 20px 80px;
+      position: relative;
+    }
+
+    .main-content > * { position: relative; z-index: 1; }
+
+    .glow-accent {
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(128,0,255,0.12) 0%, transparent 70%);
+      border-radius: 50%;
+      top: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 44px;
+      max-width: 600px;
+    }
+
+    .hero-emoji {
+      font-size: 48px;
+      margin-bottom: 12px;
+      display: block;
+      animation: snip 2s ease-in-out infinite;
+    }
+
+    @keyframes snip {
+      0%, 100% { transform: rotate(0deg) scale(1); }
+      25% { transform: rotate(-8deg) scale(1.1); }
+      50% { transform: rotate(0deg) scale(1); }
+    }
+
+    .hero h1 {
+      font-size: clamp(28px, 5vw, 42px);
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 8px;
+      letter-spacing: -1px;
+      line-height: 1.1;
+    }
+
+    .hero h1 span {
+      background: linear-gradient(135deg, var(--ev-600), var(--ev-400));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: clamp(16px, 2.5vw, 19px);
+      color: var(--ev-200);
+      font-weight: 400;
+      line-height: 1.5;
+    }
+
+    .input-area {
+      width: 100%;
+      max-width: 680px;
+      margin-bottom: 32px;
+    }
+
+    .input-wrapper {
+      display: flex;
+      gap: 0;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4), 0 0 0 1.5px var(--ev-950);
+      transition: box-shadow 0.25s;
+    }
+
+    .input-wrapper:focus-within {
+      box-shadow: 0 4px 32px rgba(128,0,255,0.2), 0 0 0 2px var(--ev-700);
+    }
+
+    .url-input {
+      flex: 1;
+      padding: 16px 20px;
+      border: none;
+      outline: none;
+      font-size: 16px;
+      font-family: 'Inter', sans-serif;
+      background: var(--ev-950);
+      color: #fff;
+      min-width: 0;
+      -webkit-appearance: none;
+      appearance: none;
+      border-radius: 0;
+    }
+
+    .url-input::placeholder {
+      color: var(--ev-400);
+      font-weight: 400;
+      opacity: 0.7;
+    }
+
+    .shrink-btn {
+      padding: 16px 28px;
+      background: var(--ev-700);
+      color: #fff;
+      border: none;
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s, transform 0.1s;
+      letter-spacing: 0.3px;
+      -webkit-tap-highlight-color: transparent;
+      min-height: 52px;
+    }
+
+    .shrink-btn:hover { background: var(--ev-500); }
+    .shrink-btn:active { transform: scale(0.97); }
+
+    .input-error {
+      margin-top: 10px;
+      color: var(--error);
+      font-size: 14px;
+      font-weight: 500;
+      display: none;
+      align-items: center;
+      gap: 6px;
+    }
+    .input-error.visible { display: flex; }
+
+    .result-card {
+      width: 100%;
+      max-width: 680px;
+      background: var(--ev-950);
+      border-radius: 16px;
+      padding: 28px 28px 24px;
+      display: none;
+      animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      border: 1px solid rgba(128,0,255,0.15);
+    }
+    .result-card.visible { display: block; }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ev-300);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      margin-bottom: 12px;
+    }
+
+    .result-url-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 10px;
+      padding: 4px 4px 4px 16px;
+      margin-bottom: 20px;
+      border: 1px solid rgba(128,0,255,0.1);
+    }
+
+    .result-url {
+      flex: 1;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      color: #fff;
+      word-break: break-all;
+      padding: 10px 0;
+      line-height: 1.5;
+      min-width: 0;
+      user-select: all;
+      -webkit-user-select: all;
+    }
+
+    .copy-btn {
+      padding: 10px 18px;
+      background: var(--ev-700);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+      min-height: 44px;
+    }
+
+    .copy-btn:hover { background: var(--ev-500); transform: translateY(-1px); }
+    .copy-btn.copied { background: var(--success); }
+
+    .stats-row {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--ev-400);
+    }
+
+    .stat-item strong {
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .qr-section {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(128,0,255,0.12);
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .qr-code-container {
+      background: #fff;
+      padding: 12px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .qr-code-container canvas { display: block; border-radius: 4px; }
+
+    .qr-info { flex: 1; min-width: 180px; }
+
+    .qr-info p {
+      font-size: 13px;
+      color: var(--ev-400);
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+
+    .qr-download-btn {
+      padding: 8px 16px;
+      background: transparent;
+      color: var(--ev-300);
+      border: 1.5px solid var(--ev-300);
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      -webkit-tap-highlight-color: transparent;
+      min-height: 40px;
+    }
+    .qr-download-btn:hover { background: var(--ev-300); color: var(--bg-deep); }
+
+    .how-section {
+      width: 100%;
+      max-width: 680px;
+      margin-top: 56px;
+    }
+
+    .how-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .how-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .how-card {
+      background: var(--surface-2);
+      border: 1.5px solid rgba(128,0,255,0.12);
+      border-radius: 14px;
+      padding: 24px 18px;
+      text-align: center;
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    }
+
+    .how-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+      border-color: var(--ev-700);
+    }
+
+    .how-card .step-num {
+      width: 36px;
+      height: 36px;
+      background: var(--ev-700);
+      color: #fff;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 16px;
+      margin-bottom: 12px;
+    }
+
+    .how-card h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .how-card p {
+      font-size: 13px;
+      color: var(--ev-400);
+      line-height: 1.5;
+    }
+
+    .limitations {
+      width: 100%;
+      max-width: 680px;
+      margin-top: 36px;
+      background: var(--surface-2);
+      border: 1.5px solid rgba(128,0,255,0.12);
+      border-radius: 14px;
+      padding: 20px 24px;
+    }
+
+    .limitations h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--ev-300);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .limitations ul {
+      list-style: none;
+      display: grid;
+      gap: 6px;
+    }
+
+    .limitations li {
+      font-size: 13px;
+      color: var(--ev-400);
+      padding-left: 20px;
+      position: relative;
+    }
+
+    .limitations li::before {
+      content: "⚠️";
+      position: absolute;
+      left: 0;
+      font-size: 12px;
+    }
+
+    .footer {
+      padding: 24px 20px;
+      text-align: center;
+      color: var(--ev-400);
+      font-size: 14px;
+      border-top: 1px solid rgba(128,0,255,0.1);
+      background: var(--surface-2);
+    }
+
+    .footer span { color: var(--ev-700); }
+
+    .footer .tagline {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--ev-950);
+      font-style: italic;
+    }
+
+    .toast-container {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+      pointer-events: none;
+      bottom: max(28px, env(safe-area-inset-bottom, 28px));
+    }
+
+    .toast {
+      background: var(--ev-950);
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+      animation: toastIn 0.35s cubic-bezier(0.16, 1, 0.3, 1), toastOut 0.3s ease 2s forwards;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid rgba(128,0,255,0.2);
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(16px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes toastOut {
+      to { opacity: 0; transform: translateY(8px) scale(0.95); }
+    }
+
+    .redirect-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-deep);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      color: #fff;
+      padding: 20px;
+    }
+
+    .redirect-overlay .logo-icon {
+      width: 64px;
+      height: 64px;
+      font-size: 28px;
+      border-radius: 16px;
+      margin-bottom: 24px;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(128,0,255,0.4); }
+      50% { transform: scale(1.05); box-shadow: 0 0 0 16px rgba(128,0,255,0); }
+    }
+
+    .redirect-overlay p {
+      font-size: 18px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+
+    .redirect-overlay .redirect-url {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--ev-200);
+      max-width: 500px;
+      text-align: center;
+      word-break: break-all;
+      opacity: 0.8;
+    }
+
+    .redirect-overlay .spinner {
+      width: 28px;
+      height: 28px;
+      border: 3px solid var(--ev-950);
+      border-top-color: var(--ev-700);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-top: 20px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-state { text-align: center; }
+
+    .error-state h2 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #fff;
+      margin: 16px 0 8px;
+    }
+
+    .error-state p {
+      color: var(--ev-200);
+      font-size: 15px;
+      margin-bottom: 24px;
+    }
+
+    .error-state a {
+      display: inline-block;
+      padding: 12px 28px;
+      background: var(--ev-700);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 10px;
+      font-weight: 600;
+      transition: background 0.2s;
+      -webkit-tap-highlight-color: transparent;
+      min-height: 44px;
+    }
+
+    .error-state a:hover { background: var(--ev-500); }
+
+    @media (max-width: 600px) {
+      .navbar { padding: 0 16px; }
+      .main-content { padding: 32px 16px 60px; }
+      .input-wrapper { flex-direction: column; border-radius: 14px; }
+      .shrink-btn { padding: 14px; }
+      .result-card { padding: 22px 18px 20px; }
+      .result-url-row { flex-direction: column; padding: 14px; gap: 12px; }
+      .result-url { font-size: 12px; }
+      .copy-btn { width: 100%; justify-content: center; }
+      .how-grid { grid-template-columns: 1fr; }
+      .qr-section { flex-direction: column; align-items: center; text-align: center; }
+      .stats-row { justify-content: center; }
+      .hero { margin-bottom: 32px; }
+      .hero-emoji { font-size: 40px; }
+      .limitations { padding: 16px 18px; }
+    }
+
+    @media (max-width: 360px) {
+      .nav-title { font-size: 18px; }
+      .hero h1 { font-size: 24px; }
+      .hero p { font-size: 15px; }
+    }
+
+    @supports (padding: env(safe-area-inset-bottom)) {
+      .footer { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+    }
+
+    ::selection { background: var(--ev-700); color: #fff; }
+
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-deep); }
+    ::-webkit-scrollbar-thumb { background: var(--ev-950); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--ev-400); }
+  </style>
+</head>
+<body>
+
+  <!-- Hidden React mount point (not used) -->
+  <div id="root" style="display:none"></div>
+  <script type="module" src="/src/main.tsx"></script>
+
+  <nav class="navbar">
+    <a href="./" class="nav-brand">
+      <div class="logo-icon">S&#8592;</div>
+      <span class="nav-title">Shrinkly</span>
+    </a>
+    <a href="https://github.com" target="_blank" rel="noopener" class="nav-github" title="View on GitHub">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+      </svg>
+    </a>
+  </nav>
+
+  <main class="main-content" id="app-ui">
+    <div class="glow-accent"></div>
+
+    <div class="hero">
+      <span class="hero-emoji">&#9986;&#65039;</span>
+      <h1>Make your links <span>tiny.</span></h1>
+      <p>Stateless link shortening with LZ compression. No servers. No tracking.</p>
+    </div>
+
+    <div class="input-area">
+      <div class="input-wrapper">
+        <input type="url" class="url-input" id="urlInput" placeholder="Paste your long URL here..." autocomplete="off" spellcheck="false" enterkeyhint="go">
+        <button class="shrink-btn" id="shrinkBtn">Shrink it &#10024;</button>
+      </div>
+      <div class="input-error" id="inputError">
+        <span>&#9888;</span>
+        <span id="errorText">Please enter a valid URL</span>
+      </div>
+    </div>
+
+    <div class="result-card" id="resultCard">
+      <div class="result-label">Your shrunk link</div>
+      <div class="result-url-row">
+        <div class="result-url" id="resultUrl"></div>
+        <button class="copy-btn" id="copyBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          <span id="copyText">Copy</span>
+        </button>
+      </div>
+      <div class="stats-row">
+        <div class="stat-item">&#128207; Original: <strong id="originalLength">0</strong> chars</div>
+        <div class="stat-item">&#128208; Shrunk: <strong id="shrunkLength">0</strong> chars</div>
+        <div class="stat-item">&#128070; Clicks: <strong id="clickCount">0</strong></div>
+      </div>
+      <div class="qr-section">
+        <div class="qr-code-container">
+          <canvas id="qrCanvas" width="120" height="120"></canvas>
+        </div>
+        <div class="qr-info">
+          <p>Scan this QR code to open your shortened link on any device.</p>
+          <button class="qr-download-btn" id="qrDownloadBtn">&#11015; Download QR</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="how-section">
+      <h2 class="how-title">How it works</h2>
+      <div class="how-grid">
+        <div class="how-card">
+          <div class="step-num">1</div>
+          <h3>Paste</h3>
+          <p>Drop in any long URL you want to shrink.</p>
+        </div>
+        <div class="how-card">
+          <div class="step-num">2</div>
+          <h3>Compress</h3>
+          <p>Your URL is LZ-compressed and encoded into the link itself. No database needed.</p>
+        </div>
+        <div class="how-card">
+          <div class="step-num">3</div>
+          <h3>Share</h3>
+          <p>Copy your link or QR code. It works forever.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="limitations">
+      <h4>&#128161; Good to know</h4>
+      <ul>
+        <li>Links are only as permanent as the hosted page</li>
+        <li>Very short URLs may not compress smaller</li>
+        <li>No analytics, no custom slugs — pure simplicity</li>
+        <li>Works entirely client-side — no backend needed</li>
+      </ul>
+    </div>
+  </main>
+
+  <footer class="footer">
+    Made with <span>&#9829;</span> &middot; No tracking &middot; 100% static
+    <div class="tagline">Shrinkly — Stateless link shortening. No servers. No tracking.</div>
+  </footer>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    /* =============================================
+       LZ-String Compression Library (inline)
+       Based on lz-string by Pieroxy (MIT License)
+       ============================================= */
+    var LZString = (function() {
+      var f = String.fromCharCode;
+      var keyStrUriSafe = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$";
+      var baseReverseDic = {};
+
+      function getBaseValue(alphabet, character) {
+        if (!baseReverseDic[alphabet]) {
+          baseReverseDic[alphabet] = {};
+          for (var i = 0; i < alphabet.length; i++) {
+            baseReverseDic[alphabet][alphabet.charAt(i)] = i;
+          }
+        }
+        return baseReverseDic[alphabet][character];
+      }
+
+      function _compress(uncompressed, bitsPerChar, getCharFromInt) {
+        if (uncompressed == null) return "";
+        var i, value,
+            context_dictionary = {},
+            context_dictionaryToCreate = {},
+            context_c = "",
+            context_wc = "",
+            context_w = "",
+            context_enlargeIn = 2,
+            context_dictSize = 3,
+            context_numBits = 2,
+            context_data = [],
+            context_data_val = 0,
+            context_data_position = 0,
+            ii;
+
+        for (ii = 0; ii < uncompressed.length; ii++) {
+          context_c = uncompressed.charAt(ii);
+          if (!Object.prototype.hasOwnProperty.call(context_dictionary, context_c)) {
+            context_dictionary[context_c] = context_dictSize++;
+            context_dictionaryToCreate[context_c] = true;
+          }
+          context_wc = context_w + context_c;
+          if (Object.prototype.hasOwnProperty.call(context_dictionary, context_wc)) {
+            context_w = context_wc;
+          } else {
+            if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
+              if (context_w.charCodeAt(0) < 256) {
+                for (i = 0; i < context_numBits; i++) {
+                  context_data_val = (context_data_val << 1);
+                  if (context_data_position == bitsPerChar - 1) {
+                    context_data_position = 0;
+                    context_data.push(getCharFromInt(context_data_val));
+                    context_data_val = 0;
+                  } else { context_data_position++; }
+                }
+                value = context_w.charCodeAt(0);
+                for (i = 0; i < 8; i++) {
+                  context_data_val = (context_data_val << 1) | (value & 1);
+                  if (context_data_position == bitsPerChar - 1) {
+                    context_data_position = 0;
+                    context_data.push(getCharFromInt(context_data_val));
+                    context_data_val = 0;
+                  } else { context_data_position++; }
+                  value = value >> 1;
+                }
+              } else {
+                value = 1;
+                for (i = 0; i < context_numBits; i++) {
+                  context_data_val = (context_data_val << 1) | value;
+                  if (context_data_position == bitsPerChar - 1) {
+                    context_data_position = 0;
+                    context_data.push(getCharFromInt(context_data_val));
+                    context_data_val = 0;
+                  } else { context_data_position++; }
+                  value = 0;
+                }
+                value = context_w.charCodeAt(0);
+                for (i = 0; i < 16; i++) {
+                  context_data_val = (context_data_val << 1) | (value & 1);
+                  if (context_data_position == bitsPerChar - 1) {
+                    context_data_position = 0;
+                    context_data.push(getCharFromInt(context_data_val));
+                    context_data_val = 0;
+                  } else { context_data_position++; }
+                  value = value >> 1;
+                }
+              }
+              context_enlargeIn--;
+              if (context_enlargeIn == 0) {
+                context_enlargeIn = Math.pow(2, context_numBits);
+                context_numBits++;
+              }
+              delete context_dictionaryToCreate[context_w];
+            } else {
+              value = context_dictionary[context_w];
+              for (i = 0; i < context_numBits; i++) {
+                context_data_val = (context_data_val << 1) | (value & 1);
+                if (context_data_position == bitsPerChar - 1) {
+                  context_data_position = 0;
+                  context_data.push(getCharFromInt(context_data_val));
+                  context_data_val = 0;
+                } else { context_data_position++; }
+                value = value >> 1;
+              }
+            }
+            context_enlargeIn--;
+            if (context_enlargeIn == 0) {
+              context_enlargeIn = Math.pow(2, context_numBits);
+              context_numBits++;
+            }
+            context_dictionary[context_wc] = context_dictSize++;
+            context_w = String(context_c);
+          }
+        }
+
+        if (context_w !== "") {
+          if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
+            if (context_w.charCodeAt(0) < 256) {
+              for (i = 0; i < context_numBits; i++) {
+                context_data_val = (context_data_val << 1);
+                if (context_data_position == bitsPerChar - 1) {
+                  context_data_position = 0;
+                  context_data.push(getCharFromInt(context_data_val));
+                  context_data_val = 0;
+                } else { context_data_position++; }
+              }
+              value = context_w.charCodeAt(0);
+              for (i = 0; i < 8; i++) {
+                context_data_val = (context_data_val << 1) | (value & 1);
+                if (context_data_position == bitsPerChar - 1) {
+                  context_data_position = 0;
+                  context_data.push(getCharFromInt(context_data_val));
+                  context_data_val = 0;
+                } else { context_data_position++; }
+                value = value >> 1;
+              }
+            } else {
+              value = 1;
+              for (i = 0; i < context_numBits; i++) {
+                context_data_val = (context_data_val << 1) | value;
+                if (context_data_position == bitsPerChar - 1) {
+                  context_data_position = 0;
+                  context_data.push(getCharFromInt(context_data_val));
+                  context_data_val = 0;
+                } else { context_data_position++; }
+                value = 0;
+              }
+              value = context_w.charCodeAt(0);
+              for (i = 0; i < 16; i++) {
+                context_data_val = (context_data_val << 1) | (value & 1);
+                if (context_data_position == bitsPerChar - 1) {
+                  context_data_position = 0;
+                  context_data.push(getCharFromInt(context_data_val));
+                  context_data_val = 0;
+                } else { context_data_position++; }
+                value = value >> 1;
+              }
+            }
+            context_enlargeIn--;
+            if (context_enlargeIn == 0) {
+              context_enlargeIn = Math.pow(2, context_numBits);
+              context_numBits++;
+            }
+            delete context_dictionaryToCreate[context_w];
+          } else {
+            value = context_dictionary[context_w];
+            for (i = 0; i < context_numBits; i++) {
+              context_data_val = (context_data_val << 1) | (value & 1);
+              if (context_data_position == bitsPerChar - 1) {
+                context_data_position = 0;
+                context_data.push(getCharFromInt(context_data_val));
+                context_data_val = 0;
+              } else { context_data_position++; }
+              value = value >> 1;
+            }
+          }
+          context_enlargeIn--;
+          if (context_enlargeIn == 0) {
+            context_enlargeIn = Math.pow(2, context_numBits);
+            context_numBits++;
+          }
+        }
+
+        value = 2;
+        for (i = 0; i < context_numBits; i++) {
+          context_data_val = (context_data_val << 1) | (value & 1);
+          if (context_data_position == bitsPerChar - 1) {
+            context_data_position = 0;
+            context_data.push(getCharFromInt(context_data_val));
+            context_data_val = 0;
+          } else { context_data_position++; }
+          value = value >> 1;
+        }
+
+        while (true) {
+          context_data_val = (context_data_val << 1);
+          if (context_data_position == bitsPerChar - 1) {
+            context_data.push(getCharFromInt(context_data_val));
+            break;
+          } else { context_data_position++; }
+        }
+
+        return context_data.join('');
+      }
+
+      function _decompress(length, resetValue, getNextValue) {
+        var dictionary = [], enlargeIn = 4, dictSize = 4, numBits = 3,
+            entry = "", result = [], i, w, c,
+            data = { val: getNextValue(0), position: resetValue, index: 1 },
+            bits, resb, maxpower, power;
+
+        for (i = 0; i < 3; i++) dictionary[i] = i;
+
+        bits = 0; maxpower = Math.pow(2, 2); power = 1;
+        while (power != maxpower) {
+          resb = data.val & data.position;
+          data.position >>= 1;
+          if (data.position == 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+          bits |= (resb > 0 ? 1 : 0) * power;
+          power <<= 1;
+        }
+
+        switch (bits) {
+          case 0:
+            bits = 0; maxpower = Math.pow(2, 8); power = 1;
+            while (power != maxpower) {
+              resb = data.val & data.position; data.position >>= 1;
+              if (data.position == 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+              bits |= (resb > 0 ? 1 : 0) * power; power <<= 1;
+            }
+            c = f(bits); break;
+          case 1:
+            bits = 0; maxpower = Math.pow(2, 16); power = 1;
+            while (power != maxpower) {
+              resb = data.val & data.position; data.position >>= 1;
+              if (data.position == 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+              bits |= (resb > 0 ? 1 : 0) * power; power <<= 1;
+            }
+            c = f(bits); break;
+          case 2: return "";
+        }
+
+        dictionary[3] = c; w = c; result.push(c);
+
+        while (true) {
+          if (data.index > length) return "";
+          bits = 0; maxpower = Math.pow(2, numBits); power = 1;
+          while (power != maxpower) {
+            resb = data.val & data.position; data.position >>= 1;
+            if (data.position == 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+            bits |= (resb > 0 ? 1 : 0) * power; power <<= 1;
+          }
+
+          switch (c = bits) {
+            case 0:
+              bits = 0; maxpower = Math.pow(2, 8); power = 1;
+              while (power != maxpower) {
+                resb = data.val & data.position; data.position >>= 1;
+                if (data.position == 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+                bits |= (resb > 0 ? 1 : 0) * power; power <<= 1;
+              }
+              dictionary[dictSize++] = f(bits); c = dictSize - 1; enlargeIn--; break;
+            case 1:
+              bits = 0; maxpower = Math.pow(2, 16); power = 1;
+              while (power != maxpower) {
+                resb = data.val & data.position; data.position >>= 1;
+                if (data.position == 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+                bits |= (resb > 0 ? 1 : 0) * power; power <<= 1;
+              }
+              dictionary[dictSize++] = f(bits); c = dictSize - 1; enlargeIn--; break;
+            case 2: return result.join('');
+          }
+
+          if (enlargeIn == 0) { enlargeIn = Math.pow(2, numBits); numBits++; }
+
+          if (dictionary[c]) {
+            entry = dictionary[c];
+          } else {
+            if (c === dictSize) { entry = w + w.charAt(0); }
+            else { return null; }
+          }
+          result.push(entry);
+          dictionary[dictSize++] = w + entry.charAt(0);
+          enlargeIn--;
+          if (enlargeIn == 0) { enlargeIn = Math.pow(2, numBits); numBits++; }
+          w = entry;
+        }
+      }
+
+      return {
+        compressToEncodedURIComponent: function(input) {
+          if (input == null) return "";
+          return _compress(input, 6, function(a) { return keyStrUriSafe.charAt(a); });
+        },
+        decompressFromEncodedURIComponent: function(input) {
+          if (input == null) return "";
+          if (input == "") return null;
+          input = input.replace(/ /g, "+");
+          return _decompress(input.length, 32, function(index) { return getBaseValue(keyStrUriSafe, input.charAt(index)); });
+        }
+      };
+    })();
+
+
+    /* =============================================
+       QR Code Generator (pure JS, no dependencies)
+       ============================================= */
+    var QRCode = (function() {
+      var EC_TABLE = [
+        null,
+        [7,1,19],[10,1,34],[15,1,55],[20,1,80],[26,1,108],
+        [18,2,68],[20,2,78],[24,2,97],[30,2,116],
+        [18,2,68,2,69],[20,4,81],[24,2,92,2,93],[26,4,107],
+        [30,3,115,1,116],[22,5,87,1,88],[24,5,98,1,99],
+        [28,1,107,5,108],[30,5,120,1,121],[28,3,113,4,114],
+        [28,3,107,5,108]
+      ];
+
+      var CAPACITY = [
+        0, 17, 32, 53, 78, 106, 134, 154, 192, 230, 271,
+        321, 370, 428, 461, 523, 589, 656, 734, 816, 871
+      ];
+
+      var ALIGN_POS = [
+        null, [], [6,18], [6,22], [6,26], [6,30], [6,34],
+        [6,22,38], [6,24,42], [6,26,46], [6,28,50],
+        [6,30,54], [6,32,58], [6,34,62], [6,26,46,66],
+        [6,26,48,70], [6,26,50,74], [6,30,54,78],
+        [6,30,56,82], [6,30,58,86], [6,34,62,90]
+      ];
+
+      var GF_EXP = new Array(512);
+      var GF_LOG = new Array(256);
+
+      (function() {
+        var x = 1;
+        for (var i = 0; i < 255; i++) {
+          GF_EXP[i] = x;
+          GF_LOG[x] = i;
+          x = x * 2;
+          if (x >= 256) x ^= 0x11d;
+        }
+        for (var i = 255; i < 512; i++) GF_EXP[i] = GF_EXP[i - 255];
+      })();
+
+      function gfMul(a, b) {
+        if (a === 0 || b === 0) return 0;
+        return GF_EXP[GF_LOG[a] + GF_LOG[b]];
+      }
+
+      function polyMul(p1, p2) {
+        var result = new Array(p1.length + p2.length - 1).fill(0);
+        for (var i = 0; i < p1.length; i++)
+          for (var j = 0; j < p2.length; j++)
+            result[i + j] ^= gfMul(p1[i], p2[j]);
+        return result;
+      }
+
+      function polyDiv(dividend, divisor) {
+        var result = dividend.slice();
+        for (var i = 0; i < dividend.length - divisor.length + 1; i++) {
+          if (result[i] === 0) continue;
+          var coef = result[i];
+          for (var j = 0; j < divisor.length; j++)
+            result[i + j] ^= gfMul(divisor[j], coef);
+        }
+        return result.slice(dividend.length - divisor.length + 1);
+      }
+
+      function getGeneratorPoly(degree) {
+        var gen = [1];
+        for (var i = 0; i < degree; i++) gen = polyMul(gen, [1, GF_EXP[i]]);
+        return gen;
+      }
+
+      function getECCodewords(data, ecCount) {
+        var gen = getGeneratorPoly(ecCount);
+        var padded = new Array(data.length + ecCount).fill(0);
+        for (var i = 0; i < data.length; i++) padded[i] = data[i];
+        return polyDiv(padded, gen);
+      }
+
+      function getVersion(dataLen) {
+        for (var v = 1; v <= 20; v++) {
+          if (dataLen <= CAPACITY[v]) return v;
+        }
+        return 20;
+      }
+
+      function encodeData(str, version) {
+        var bytes = [];
+        for (var i = 0; i < str.length; i++) {
+          var c = str.charCodeAt(i);
+          if (c < 0x80) { bytes.push(c); }
+          else if (c < 0x800) { bytes.push(0xc0 | (c >> 6), 0x80 | (c & 0x3f)); }
+          else if (c < 0xd800 || c >= 0xe000) { bytes.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 0x3f), 0x80 | (c & 0x3f)); }
+          else {
+            i++;
+            c = 0x10000 + (((c & 0x3ff) << 10) | (str.charCodeAt(i) & 0x3ff));
+            bytes.push(0xf0 | (c >> 18), 0x80 | ((c >> 12) & 0x3f), 0x80 | ((c >> 6) & 0x3f), 0x80 | (c & 0x3f));
+          }
+        }
+        var bits = [];
+        bits.push(0, 1, 0, 0);
+        var ccBits = version <= 9 ? 8 : 16;
+        for (var i = ccBits - 1; i >= 0; i--) bits.push((bytes.length >> i) & 1);
+        for (var b = 0; b < bytes.length; b++)
+          for (var i = 7; i >= 0; i--) bits.push((bytes[b] >> i) & 1);
+        var ecInfo = EC_TABLE[version];
+        var totalDataCodewords;
+        if (ecInfo.length === 3) totalDataCodewords = ecInfo[1] * ecInfo[2];
+        else totalDataCodewords = ecInfo[1] * ecInfo[2] + ecInfo[3] * ecInfo[4];
+        var targetBits = totalDataCodewords * 8;
+        for (var i = 0; i < 4 && bits.length < targetBits; i++) bits.push(0);
+        while (bits.length % 8 !== 0 && bits.length < targetBits) bits.push(0);
+        var padBytes = [0xEC, 0x11], padIdx = 0;
+        while (bits.length < targetBits) {
+          var pb = padBytes[padIdx % 2];
+          for (var i = 7; i >= 0; i--) bits.push((pb >> i) & 1);
+          padIdx++;
+        }
+        var codewords = [];
+        for (var i = 0; i < bits.length; i += 8) {
+          var byte = 0;
+          for (var j = 0; j < 8; j++) byte = (byte << 1) | (bits[i + j] || 0);
+          codewords.push(byte);
+        }
+        return codewords;
+      }
+
+      function interleave(data, version) {
+        var ecInfo = EC_TABLE[version];
+        var ecPerBlock = ecInfo[0];
+        var blocks = [], offset = 0;
+        for (var i = 0; i < ecInfo[1]; i++) {
+          blocks.push(data.slice(offset, offset + ecInfo[2]));
+          offset += ecInfo[2];
+        }
+        if (ecInfo.length > 3) {
+          for (var i = 0; i < ecInfo[3]; i++) {
+            blocks.push(data.slice(offset, offset + ecInfo[4]));
+            offset += ecInfo[4];
+          }
+        }
+        var ecBlocks = [];
+        for (var i = 0; i < blocks.length; i++) {
+          var ec = getECCodewords(blocks[i], ecPerBlock);
+          var arr = [];
+          for (var j = 0; j < ec.length; j++) arr.push(ec[j]);
+          ecBlocks.push(arr);
+        }
+        var result = [];
+        var maxDataLen = 0;
+        for (var i = 0; i < blocks.length; i++) if (blocks[i].length > maxDataLen) maxDataLen = blocks[i].length;
+        for (var i = 0; i < maxDataLen; i++)
+          for (var j = 0; j < blocks.length; j++)
+            if (i < blocks[j].length) result.push(blocks[j][i]);
+        for (var i = 0; i < ecPerBlock; i++)
+          for (var j = 0; j < ecBlocks.length; j++)
+            if (i < ecBlocks[j].length) result.push(ecBlocks[j][i]);
+        return result;
+      }
+
+      function createMatrix(version) {
+        var size = version * 4 + 17;
+        var matrix = [], reserved = [];
+        for (var i = 0; i < size; i++) {
+          matrix.push(new Array(size).fill(null));
+          reserved.push(new Array(size).fill(false));
+        }
+        return { matrix: matrix, reserved: reserved, size: size };
+      }
+
+      function addFinderPattern(matrix, reserved, row, col) {
+        for (var r = -1; r <= 7; r++) {
+          for (var c = -1; c <= 7; c++) {
+            var nr = row + r, nc = col + c;
+            if (nr < 0 || nr >= matrix.length || nc < 0 || nc >= matrix.length) continue;
+            var isBlack = (r >= 0 && r <= 6 && (c === 0 || c === 6)) ||
+                         (c >= 0 && c <= 6 && (r === 0 || r === 6)) ||
+                         (r >= 2 && r <= 4 && c >= 2 && c <= 4);
+            matrix[nr][nc] = isBlack ? 1 : 0;
+            reserved[nr][nc] = true;
+          }
+        }
+      }
+
+      function addAlignmentPattern(matrix, reserved, row, col) {
+        for (var r = -2; r <= 2; r++) {
+          for (var c = -2; c <= 2; c++) {
+            var isBlack = Math.max(Math.abs(r), Math.abs(c)) !== 1;
+            matrix[row + r][col + c] = isBlack ? 1 : 0;
+            reserved[row + r][col + c] = true;
+          }
+        }
+      }
+
+      function addTimingPatterns(matrix, reserved) {
+        var size = matrix.length;
+        for (var i = 8; i < size - 8; i++) {
+          if (!reserved[6][i]) { matrix[6][i] = i % 2 === 0 ? 1 : 0; reserved[6][i] = true; }
+          if (!reserved[i][6]) { matrix[i][6] = i % 2 === 0 ? 1 : 0; reserved[i][6] = true; }
+        }
+      }
+
+      function reserveFormatBits(matrix, reserved) {
+        var size = matrix.length;
+        for (var i = 0; i <= 8; i++) {
+          if (i < size) { reserved[8][i] = true; reserved[i][8] = true; }
+        }
+        for (var i = 0; i <= 7; i++) reserved[8][size - 1 - i] = true;
+        for (var i = 0; i <= 7; i++) reserved[size - 1 - i][8] = true;
+        matrix[size - 8][8] = 1;
+        reserved[size - 8][8] = true;
+      }
+
+      function reserveVersionBits(matrix, reserved, version) {
+        if (version < 7) return;
+        var size = matrix.length;
+        for (var i = 0; i < 6; i++)
+          for (var j = 0; j < 3; j++) {
+            reserved[i][size - 11 + j] = true;
+            reserved[size - 11 + j][i] = true;
+          }
+      }
+
+      function placeData(matrix, reserved, data) {
+        var size = matrix.length, bits = [];
+        for (var d = 0; d < data.length; d++)
+          for (var i = 7; i >= 0; i--) bits.push((data[d] >> i) & 1);
+        var bitIdx = 0, upward = true;
+        for (var right = size - 1; right >= 1; right -= 2) {
+          if (right === 6) right = 5;
+          for (var vert = 0; vert < size; vert++) {
+            var row = upward ? size - 1 - vert : vert;
+            for (var dx = 0; dx <= 1; dx++) {
+              var col = right - dx;
+              if (col < 0 || col >= size) continue;
+              if (reserved[row][col]) continue;
+              matrix[row][col] = bitIdx < bits.length ? bits[bitIdx] : 0;
+              bitIdx++;
+            }
+          }
+          upward = !upward;
+        }
+      }
+
+      var FORMAT_BITS = [
+        0x77c4, 0x72f3, 0x7daa, 0x789d, 0x662f, 0x6318, 0x6c41, 0x6976,
+        0x5412, 0x5125, 0x5e7c, 0x5b4b, 0x45f9, 0x40ce, 0x4f97, 0x4aa0,
+        0x355f, 0x3068, 0x3f31, 0x3a06, 0x24b4, 0x2183, 0x2eda, 0x2bed,
+        0x1689, 0x13be, 0x1ce7, 0x19d0, 0x0762, 0x0255, 0x0d0c, 0x083b
+      ];
+
+      function applyFormatBits(matrix, maskPattern) {
+        var size = matrix.length;
+        var formatIndex = 1 * 8 + maskPattern;
+        var bits = FORMAT_BITS[formatIndex];
+        var positions1 = [
+          [0,8],[1,8],[2,8],[3,8],[4,8],[5,8],[7,8],[8,8],
+          [8,7],[8,5],[8,4],[8,3],[8,2],[8,1],[8,0]
+        ];
+        for (var i = 0; i < 15; i++) {
+          var bit = (bits >> (14 - i)) & 1;
+          matrix[positions1[i][0]][positions1[i][1]] = bit;
+        }
+        var positions2 = [];
+        for (var i = 0; i < 8; i++) positions2.push([8, size - 1 - i]);
+        for (var i = 0; i < 7; i++) positions2.push([size - 7 + i, 8]);
+        for (var i = 0; i < 15; i++) {
+          var bit = (bits >> (14 - i)) & 1;
+          matrix[positions2[i][0]][positions2[i][1]] = bit;
+        }
+      }
+
+      var MASK_FUNCTIONS = [
+        function(r, c) { return (r + c) % 2 === 0; },
+        function(r, c) { return r % 2 === 0; },
+        function(r, c) { return c % 3 === 0; },
+        function(r, c) { return (r + c) % 3 === 0; },
+        function(r, c) { return (Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0; },
+        function(r, c) { return ((r * c) % 2 + (r * c) % 3) === 0; },
+        function(r, c) { return ((r * c) % 2 + (r * c) % 3) % 2 === 0; },
+        function(r, c) { return ((r + c) % 2 + (r * c) % 3) % 2 === 0; }
+      ];
+
+      function applyMask(matrix, reserved, maskIdx) {
+        var size = matrix.length, fn = MASK_FUNCTIONS[maskIdx];
+        for (var r = 0; r < size; r++)
+          for (var c = 0; c < size; c++)
+            if (!reserved[r][c] && fn(r, c)) matrix[r][c] ^= 1;
+      }
+
+      function scoreMask(matrix) {
+        var size = matrix.length, penalty = 0;
+        for (var r = 0; r < size; r++) {
+          var count = 1;
+          for (var c = 1; c < size; c++) {
+            if (matrix[r][c] === matrix[r][c-1]) { count++; if (count === 5) penalty += 3; else if (count > 5) penalty += 1; }
+            else count = 1;
+          }
+        }
+        for (var c = 0; c < size; c++) {
+          var count = 1;
+          for (var r = 1; r < size; r++) {
+            if (matrix[r][c] === matrix[r-1][c]) { count++; if (count === 5) penalty += 3; else if (count > 5) penalty += 1; }
+            else count = 1;
+          }
+        }
+        for (var r = 0; r < size - 1; r++)
+          for (var c = 0; c < size - 1; c++) {
+            var v = matrix[r][c];
+            if (v === matrix[r][c+1] && v === matrix[r+1][c] && v === matrix[r+1][c+1]) penalty += 3;
+          }
+        return penalty;
+      }
+
+      function generate(text) {
+        var bytes = [];
+        for (var i = 0; i < text.length; i++) {
+          var c = text.charCodeAt(i);
+          if (c < 0x80) bytes.push(c);
+          else if (c < 0x800) { bytes.push(0xc0 | (c >> 6), 0x80 | (c & 0x3f)); }
+          else { bytes.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 0x3f), 0x80 | (c & 0x3f)); }
+        }
+        var version = getVersion(bytes.length);
+        var size = version * 4 + 17;
+        var dataCodewords = encodeData(text, version);
+        var finalData = interleave(dataCodewords, version);
+        var bestMatrix = null, bestScore = Infinity;
+        for (var maskIdx = 0; maskIdx < 8; maskIdx++) {
+          var m = createMatrix(version);
+          var matrix = m.matrix, reserved = m.reserved;
+          addFinderPattern(matrix, reserved, 0, 0);
+          addFinderPattern(matrix, reserved, 0, size - 7);
+          addFinderPattern(matrix, reserved, size - 7, 0);
+          if (version >= 2) {
+            var positions = ALIGN_POS[version];
+            for (var i = 0; i < positions.length; i++)
+              for (var j = 0; j < positions.length; j++) {
+                var r = positions[i], c = positions[j];
+                if (reserved[r][c]) continue;
+                addAlignmentPattern(matrix, reserved, r, c);
+              }
+          }
+          addTimingPatterns(matrix, reserved);
+          reserveFormatBits(matrix, reserved);
+          reserveVersionBits(matrix, reserved, version);
+          placeData(matrix, reserved, finalData);
+          applyMask(matrix, reserved, maskIdx);
+          applyFormatBits(matrix, maskIdx);
+          var score = scoreMask(matrix);
+          if (score < bestScore) { bestScore = score; bestMatrix = []; for (var r = 0; r < matrix.length; r++) bestMatrix.push(matrix[r].slice()); }
+        }
+        return bestMatrix;
+      }
+
+      return { generate: generate };
+    })();
+
+
+    /* =============================================
+       Redirect Handler — runs immediately
+       ============================================= */
+    (function() {
+      var hash = window.location.hash.substring(1);
+      if (!hash) return;
+
+      var decoded = '';
+      try {
+        decoded = LZString.decompressFromEncodedURIComponent(hash);
+      } catch(e) { decoded = ''; }
+
+      // Fallback: try old-style base64 decoding
+      if (!decoded) {
+        try {
+          var base64 = hash.replace(/-/g, '+').replace(/_/g, '/');
+          while (base64.length % 4) base64 += '=';
+          decoded = decodeURIComponent(escape(atob(base64)));
+        } catch(e) { decoded = ''; }
+      }
+
+      if (!decoded) {
+        var appUI = document.getElementById('app-ui');
+        if (appUI) {
+          appUI.innerHTML =
+            '<div class="error-state" style="padding:80px 20px">' +
+            '<div style="font-size:48px">&#128565;</div>' +
+            '<h2>Invalid Link</h2>' +
+            '<p>This shortened link appears to be corrupted or invalid.</p>' +
+            '<a href="./">Create a new link</a>' +
+            '</div>';
+        }
+        return;
+      }
+
+      var storageKey = 'shrinkly_clicks_' + hash.substring(0, 40);
+      try {
+        var c = parseInt(localStorage.getItem(storageKey) || '0', 10);
+        localStorage.setItem(storageKey, String(c + 1));
+      } catch(e) {}
+
+      var overlay = document.createElement('div');
+      overlay.className = 'redirect-overlay';
+      overlay.innerHTML =
+        '<div class="logo-icon" style="width:64px;height:64px;font-size:28px;border-radius:16px;margin-bottom:24px">S&#8592;</div>' +
+        '<p>Redirecting you&#8230;</p>' +
+        '<div class="redirect-url">' + decoded + '</div>' +
+        '<div class="spinner"></div>';
+      document.body.appendChild(overlay);
+
+      setTimeout(function() { window.location.replace(decoded); }, 600);
+    })();
+
+
+    /* =============================================
+       App UI Logic
+       ============================================= */
+    var urlInput = document.getElementById('urlInput');
+    var shrinkBtn = document.getElementById('shrinkBtn');
+    var inputError = document.getElementById('inputError');
+    var errorText = document.getElementById('errorText');
+    var resultCard = document.getElementById('resultCard');
+    var resultUrl = document.getElementById('resultUrl');
+    var copyBtn = document.getElementById('copyBtn');
+    var copyTextEl = document.getElementById('copyText');
+    var originalLength = document.getElementById('originalLength');
+    var shrunkLength = document.getElementById('shrunkLength');
+    var clickCount = document.getElementById('clickCount');
+    var qrDownloadBtn = document.getElementById('qrDownloadBtn');
+    var currentShortURL = '';
+
+    if (urlInput) {
+      urlInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') handleShrink();
+      });
+      urlInput.addEventListener('input', function() {
+        inputError.classList.remove('visible');
+      });
+    }
+
+    if (shrinkBtn) {
+      shrinkBtn.addEventListener('click', handleShrink);
+    }
+
+    if (copyBtn) {
+      copyBtn.addEventListener('click', handleCopy);
+    }
+
+    if (qrDownloadBtn) {
+      qrDownloadBtn.addEventListener('click', downloadQR);
+    }
+
+    function isValidURL(string) {
+      try {
+        var url = new URL(string);
+        return url.protocol === 'http:' || url.protocol === 'https:';
+      } catch(e) { return false; }
+    }
+
+    function handleShrink() {
+      var rawURL = urlInput.value.trim();
+
+      if (!rawURL) {
+        showError('Please enter a URL to shrink.');
+        return;
+      }
+
+      if (!/^https?:\/\//i.test(rawURL)) {
+        rawURL = 'https://' + rawURL;
+        urlInput.value = rawURL;
+      }
+
+      if (!isValidURL(rawURL)) {
+        showError("That doesn't look like a valid URL. Try again.");
+        return;
+      }
+
+      inputError.classList.remove('visible');
+
+      var compressed = LZString.compressToEncodedURIComponent(rawURL);
+      var base = window.location.origin + window.location.pathname;
+      currentShortURL = base + '#' + compressed;
+
+      resultUrl.textContent = currentShortURL;
+      originalLength.textContent = rawURL.length;
+      shrunkLength.textContent = currentShortURL.length;
+
+      var storageKey = 'shrinkly_clicks_' + compressed.substring(0, 40);
+      var clicks = '0';
+      try { clicks = localStorage.getItem(storageKey) || '0'; } catch(e) {}
+      clickCount.textContent = clicks;
+
+      resultCard.classList.add('visible');
+      copyBtn.classList.remove('copied');
+      copyTextEl.textContent = 'Copy';
+
+      generateQR(currentShortURL);
+      resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      showToast('Link shrunk successfully!');
+    }
+
+    function showError(msg) {
+      errorText.textContent = msg;
+      inputError.classList.add('visible');
+      urlInput.focus();
+    }
+
+    function handleCopy() {
+      if (!currentShortURL) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(currentShortURL).then(function() {
+          onCopySuccess();
+        }).catch(function() { fallbackCopy(); });
+      } else { fallbackCopy(); }
+    }
+
+    function fallbackCopy() {
+      var ta = document.createElement('textarea');
+      ta.value = currentShortURL;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, 99999);
+      try { document.execCommand('copy'); onCopySuccess(); } catch(e) {}
+      document.body.removeChild(ta);
+    }
+
+    function onCopySuccess() {
+      copyBtn.classList.add('copied');
+      copyTextEl.textContent = 'Copied!';
+      showToast('📋 Copied to clipboard!');
+      setTimeout(function() {
+        copyBtn.classList.remove('copied');
+        copyTextEl.textContent = 'Copy';
+      }, 2500);
+    }
+
+    function showToast(message) {
+      var container = document.getElementById('toastContainer');
+      var toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(function() {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 2500);
+    }
+
+    function generateQR(text) {
+      var canvas = document.getElementById('qrCanvas');
+      if (!canvas) return;
+      var ctx = canvas.getContext('2d');
+      var size = 120;
+      canvas.width = size;
+      canvas.height = size;
+      try {
+        var qr = QRCode.generate(text);
+        var moduleCount = qr.length;
+        var cellSize = size / moduleCount;
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, size, size);
+        ctx.fillStyle = '#1a0044';
+        for (var row = 0; row < moduleCount; row++) {
+          for (var col = 0; col < moduleCount; col++) {
+            if (qr[row][col]) {
+              ctx.fillRect(
+                Math.round(col * cellSize),
+                Math.round(row * cellSize),
+                Math.ceil(cellSize),
+                Math.ceil(cellSize)
+              );
+            }
+          }
+        }
+      } catch(e) {
+        ctx.fillStyle = '#1a0044';
+        ctx.fillRect(0, 0, size, size);
+        ctx.fillStyle = '#fff';
+        ctx.font = '12px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('QR Error', size / 2, size / 2);
+      }
+    }
+
+    function downloadQR() {
+      var canvas = document.getElementById('qrCanvas');
+      if (!canvas) return;
+      var link = document.createElement('a');
+      link.download = 'shrinkly-qr.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      showToast('QR code downloaded!');
+    }
+
+    window.addEventListener('load', function() {
+      if (!window.location.hash && urlInput) {
+        urlInput.focus();
+      }
+    });
+  </script>
+</body>
 </html>
